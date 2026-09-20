@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { Button } from 'src/ui/button';
 import { Select } from 'src/ui/select';
 import { RadioGroup } from 'src/ui/radio-group';
 import { Separator } from 'src/ui/separator';
-
-import styles from './ArticleParamsForm.module.scss';
+import { Text } from 'src/ui/text';
 import {
+	defaultArticleState,
+	ArticleStateType,
+	OptionType,
 	fontFamilyOptions,
 	fontColors,
 	backgroundColors,
@@ -14,59 +16,85 @@ import {
 	fontSizeOptions,
 } from '../../constants/articleProps';
 
+import styles from './ArticleParamsForm.module.scss';
+import { ArrowButton } from 'src/ui/arrow-button';
+
 type ArticleParamsFormProps = {
-	isOpen: boolean;
-	settings: typeof import('../../constants/articleProps').defaultArticleState;
-	onApply: (
-		newSettings: typeof import('../../constants/articleProps').defaultArticleState
-	) => void;
-	onReset: () => void;
+	currentArticleState: ArticleStateType;
+	onUpdateArticle: (newSettings: ArticleStateType) => void;
 };
 
 export const ArticleParamsForm = ({
-	isOpen,
-	settings,
-	onApply,
-	onReset,
+	currentArticleState,
+	onUpdateArticle,
 }: ArticleParamsFormProps) => {
-	const [localSettings, setLocalSettings] = useState(settings);
+	const [isOpen, setIsOpen] = useState(false);
+	const [localSettings, setLocalSettings] = useState(currentArticleState);
+	const formRef = useRef<HTMLDivElement | null>(null);
 
-	const handleFontFamilyChange = (
-		option: (typeof fontFamilyOptions)[number]
-	) => {
-		setLocalSettings((prev) => ({ ...prev, fontFamilyOption: option }));
-	};
+	useEffect(() => {
+		if (!isOpen) return;
 
-	const handleFontSizeChange = (option: (typeof fontSizeOptions)[number]) => {
-		setLocalSettings((prev) => ({ ...prev, fontSizeOption: option }));
-	};
+		const handleDocumentClick = (event: MouseEvent) => {
+			const target = event.target as Node;
 
-	const handleFontColorChange = (option: (typeof fontColors)[number]) => {
-		setLocalSettings((prev) => ({ ...prev, fontColor: option }));
-	};
+			if (formRef.current && formRef.current.contains(target)) {
+				return;
+			}
 
-	const handleBgColorChange = (option: (typeof backgroundColors)[number]) => {
-		setLocalSettings((prev) => ({ ...prev, backgroundColor: option }));
-	};
+			setIsOpen(false);
+		};
 
-	const handleWidthChange = (option: (typeof contentWidthArr)[number]) => {
-		setLocalSettings((prev) => ({ ...prev, contentWidth: option }));
-	};
+		document.addEventListener('click', handleDocumentClick);
 
-	const handleApplyClick = () => {
-		onApply(localSettings);
-	};
+		return () => {
+			document.removeEventListener('click', handleDocumentClick);
+		};
+	}, [isOpen]);
 
-	const handleResetClick = () => {
-		setLocalSettings(settings);
-		onReset();
+	const createHandler =
+		(field: keyof ArticleStateType) => (option: OptionType) => {
+			setLocalSettings((prev) => ({ ...prev, [field]: option }));
+		};
+
+	const handleFontFamilyChange = createHandler('fontFamilyOption');
+
+	const handleFontSizeChange = createHandler('fontSizeOption');
+	const handleFontColorChange = createHandler('fontColor');
+	const handleBackgroundColorChange = createHandler('backgroundColor');
+
+	const handleWidthChange = createHandler('contentWidth');
+
+	const handleFormSubmit = (isReset: boolean) => {
+		if (isReset) {
+			setLocalSettings(defaultArticleState);
+			onUpdateArticle(defaultArticleState);
+		} else {
+			onUpdateArticle(localSettings);
+		}
+
+		setIsOpen(false);
 	};
 
 	return (
-		<aside
-			className={clsx(styles.container, { [styles.container_open]: isOpen })}>
-			<form className={styles.form} onSubmit={(e) => e.preventDefault()}>
-				<div className={styles.group}>
+		<div ref={formRef} style={{ position: 'relative', width: '100%' }}>
+			<ArrowButton isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} />
+			<aside
+				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
+				<form
+					className={styles.form}
+					onSubmit={(e) => {
+						e.preventDefault();
+						handleFormSubmit(false);
+					}}>
+					<Text
+						size={31}
+						weight={800}
+						uppercase={true}
+						align='left'
+						family='open-sans'>
+						ЗАДАЙТЕ ПАРАМЕТРЫ
+					</Text>
 					<Select
 						title='Шрифт'
 						options={fontFamilyOptions}
@@ -80,39 +108,40 @@ export const ArticleParamsForm = ({
 						selected={localSettings.fontSizeOption}
 						onChange={handleFontSizeChange}
 					/>
-				</div>
 
-				<div className={styles.group}>
 					<Select
 						title='Цвет текста'
 						options={fontColors}
 						selected={localSettings.fontColor}
 						onChange={handleFontColorChange}
 					/>
+
+					<Separator />
+
 					<Select
 						title='Цвет фона'
 						options={backgroundColors}
 						selected={localSettings.backgroundColor}
-						onChange={handleBgColorChange}
+						onChange={handleBackgroundColorChange}
 					/>
-				</div>
 
-				<Separator />
-
-				<div className={styles.group}>
 					<Select
 						title='Ширина контейнера'
 						options={contentWidthArr}
 						selected={localSettings.contentWidth}
 						onChange={handleWidthChange}
 					/>
-				</div>
 
-				<div className={styles.bottomContainer}>
-					<Button title='Сбросить' type='clear' onClick={handleResetClick} />
-					<Button title='Применить' type='apply' onClick={handleApplyClick} />
-				</div>
-			</form>
-		</aside>
+					<div className={styles.bottomContainer}>
+						<Button
+							title='Сбросить'
+							type='clear'
+							onClick={() => handleFormSubmit(true)}
+						/>
+						<Button title='Применить' type='apply' />
+					</div>
+				</form>
+			</aside>
+		</div>
 	);
 };
