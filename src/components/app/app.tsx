@@ -18,10 +18,6 @@ export const App = () => {
 		setCurrentSettings(newSettings);
 	};
 
-	const handleReset = () => {
-		setCurrentSettings(defaultArticleState);
-	};
-
 	return (
 		<main
 			className={clsx(styles.main)}
@@ -37,7 +33,6 @@ export const App = () => {
 			<ArticleParamsForm
 				currentArticleState={currentSettings}
 				onUpdateArticle={handleApply}
-				onReset={handleReset}
 			/>
 
 			<Article />

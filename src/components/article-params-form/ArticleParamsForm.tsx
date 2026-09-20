@@ -72,8 +72,6 @@ export const ArticleParamsForm = ({
 		} else {
 			onUpdateArticle(localSettings);
 		}
-
-		setIsOpen(false);
 	};
 
 	return (
